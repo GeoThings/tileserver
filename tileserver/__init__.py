@@ -265,7 +265,7 @@ class TileServer(object):
         coord = request_data.coord
         format = request_data.format
 
-        tile_data = self.reformat_from_stored_json(request_data, layer_data)
+        tile_data = self.read_without_reformat(request_data, layer_data)
         if tile_data is not None:
             return self.create_response(
                 request, 200, tile_data, format.mimetype)
@@ -363,6 +363,31 @@ class TileServer(object):
 
         return tile_data
 
+    def read_without_reformat(self, request_data, layer_data):
+        layer_spec = request_data.layer_spec
+        coord = request_data.coord
+        format = request_data.format
+
+        if not self.store or coord.zoom > 20:
+            return None
+
+        tile_size = request_data.tile_size
+        meta_coord, offset = self.coord_split(coord, tile_size)
+
+        # we either have a dynamic layer request, or it's a request for a new
+        # tile that is not currently in the tiles of interest, or it's for a
+        # request that's in the tiles of interest that hasn't been generated,
+        # possibly because a new prefix is used and all tiles haven't been
+        # generated yet before making the switch
+
+        # in any case, it makes sense to try and fetch the json format from
+        # the store first
+        tile_data = self.read_tile_with_forced_format_no_metatile(meta_coord, format, offset)
+        if tile_data is None:
+            return None
+
+        return tile_data
+
     def extract_tile_data(self, coord, fmt, formatted_tiles_all):
         for tile in formatted_tiles_all:
             if tile['format'] == fmt and tile['coord'] == coord:
@@ -371,6 +396,21 @@ class TileServer(object):
         raise KeyError("Unable to find format %r at coordinate %r in "
                        "formatted tiles." % (fmt, coord))
 
+    def read_tile_with_forced_format_no_metatile(self, coord, fmt, offset=None):
+        raw_data = None
+        try:
+            raw_data = self.store.read_tile(coord, fmt, 'all')
+        except:
+            stacktrace = format_stacktrace_one_line()
+            print 'Error reading coord %s with format %s: %s' % (
+                serialize_coord(coord), format.extension, stacktrace)
+
+        if raw_data is None:
+            return None
+
+        return raw_data
+
+    
     def read_tile(self, coord, offset=None):
         if self.using_metatiles():
             fmt = zip_format
