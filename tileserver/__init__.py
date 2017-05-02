@@ -270,11 +270,13 @@ class TileServer(object):
         
         tile_data = self.read_without_reformat(request_data, layer_data)
         if tile_data is not None:
-            print '%s - - [%s] "%s %s HTTP/*.*" Serving from cache -' % (request.remote_addr, timestamp, request.method, request.path)    
+            log = '%s - - [%s] "%s %s HTTP/*.*" Serving from cache -' % (request.remote_addr, timestamp, request.method, request.path)  
+            sys.stdout.write(log + '\n')   
             return self.create_response(
                 request, 200, tile_data, format.mimetype)
 
-        print '%s - - [%s] "%s %s HTTP/*.*" Generating -' % (request.remote_addr, timestamp, request.method, request.path)
+        log = '%s - - [%s] "%s %s HTTP/*.*" Generating -' % (request.remote_addr, timestamp, request.method, request.path)
+        sys.stdout.write(log + '\n')   
         tile_size = request_data.tile_size
         meta_coord, offset = self.coord_split(coord, tile_size)
 
