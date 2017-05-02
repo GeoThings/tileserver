@@ -19,6 +19,7 @@ from tilequeue.utils import format_stacktrace_one_line
 from tilequeue.metatile import extract_metatile
 from werkzeug.wrappers import Request
 from werkzeug.wrappers import Response
+from datetime import datetime
 import ujson as json
 import psycopg2
 import random
@@ -265,11 +266,15 @@ class TileServer(object):
         coord = request_data.coord
         format = request_data.format
 
+        timestamp = datetime.now().strftime('%d/%B/%Y %H:%M:%S')
+        
         tile_data = self.read_without_reformat(request_data, layer_data)
         if tile_data is not None:
+            print '%s - - [%s] "%s %s HTTP/*.*" Serving from cache -' % (request.remote_addr, timestamp, request.method, request.path)    
             return self.create_response(
                 request, 200, tile_data, format.mimetype)
 
+        print '%s - - [%s] "%s %s HTTP/*.*" Generating -' % (request.remote_addr, timestamp, request.method, request.path)
         tile_size = request_data.tile_size
         meta_coord, offset = self.coord_split(coord, tile_size)
 
