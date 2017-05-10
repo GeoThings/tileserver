@@ -334,7 +334,8 @@ class TileServer(object):
 
             tile_data = reformat_selected_layers(
                 json_data_all, layer_data, coord, format, self.buffer_cfg)
-
+        
+        self.store.write_tile(tile_data, coord, format, layer_spec)
         response = self.create_response(
             request, 200, tile_data, format.mimetype)
         return response
