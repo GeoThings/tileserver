@@ -5,3 +5,7 @@ build
 dist
 config.yaml
 /tiles
+env
+*.log
+*.out
+.vscode
