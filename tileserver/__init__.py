@@ -266,7 +266,7 @@ class TileServer(object):
         coord = request_data.coord
         format = request_data.format
 
-        timestamp = datetime.now().strftime('%d/%B/%Y %H:%M:%S')
+        timestamp = datetime.now().strftime('%d/%b/%Y %H:%M:%S')
         
         tile_data = self.read_without_reformat(request_data, layer_data)
         if tile_data is not None:
