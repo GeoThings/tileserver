@@ -195,7 +195,7 @@ class TileServer(object):
                  buffer_cfg, formats, health_checker=None,
                  add_cors_headers=False, metatile_size=None,
                  metatile_store_originals=False, path_tile_size=None,
-                 max_interesting_zoom=None):
+                 max_interesting_zoom=None, cache_max_zoom=None):
         self.layer_config = layer_config
         self.extensions = extensions
         self.data_fetcher = data_fetcher
@@ -216,6 +216,7 @@ class TileServer(object):
         self.metatile_store_originals = metatile_store_originals
         self.path_tile_size = path_tile_size or {}
         self.max_interesting_zoom = max_interesting_zoom or 20
+        self.cache_max_zoom = cache_max_zoom
 
     def __call__(self, environ, start_response):
         request = Request(environ)
@@ -268,12 +269,14 @@ class TileServer(object):
 
         timestamp = datetime.now().strftime('%d/%b/%Y %H:%M:%S')
         
-        tile_data = self.read_without_reformat(request_data, layer_data)
-        if tile_data is not None:
-            log = '%s - - [%s] "%s %s HTTP/*.*" Serving from cache -' % (request.remote_addr, timestamp, request.method, request.path)  
-            sys.stderr.write(log + '\n')   
-            return self.create_response(
-                request, 200, tile_data, format.mimetype)
+        # only use cache when zoom level is not exceeding maximum's cache_max_zoom
+        if self.cache_max_zoom is None or coord.zoom <= self.cache_max_zoom:
+            tile_data = self.read_without_reformat(request_data, layer_data)
+            if tile_data is not None:
+                log = '%s - - [%s] "%s %s HTTP/*.*" Serving from cache -' % (request.remote_addr, timestamp, request.method, request.path)  
+                sys.stderr.write(log + '\n')   
+                return self.create_response(
+                    request, 200, tile_data, format.mimetype)
 
         log = '%s - - [%s] "%s %s HTTP/*.*" Generating -' % (request.remote_addr, timestamp, request.method, request.path)
         sys.stderr.write(log + '\n')   
@@ -579,10 +582,12 @@ def create_tileserver_from_config(config):
         conn_info, all_layer_data, io_pool, n_conn)
 
     store = None
+    cache_max_zoom = None
     store_config = config.get('store')
     if store_config:
         store_type = store_config.get('type')
         store_name = store_config.get('name')
+        cache_max_zoom = store_config.get('cache-max-zoom')
         if store_type and store_name:
             store = make_store(store_type, store_name, store_config)
 
@@ -619,7 +624,7 @@ def create_tileserver_from_config(config):
         layer_config, extensions, data_fetcher, post_process_data, io_pool,
         store, redis_cache_index, buffer_cfg, formats,
         health_checker, add_cors_headers, metatile_size,
-        metatile_store_originals, path_tile_size, max_interesting_zoom)
+        metatile_store_originals, path_tile_size, max_interesting_zoom, cache_max_zoom)
     return tile_server
 
 

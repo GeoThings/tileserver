@@ -44,6 +44,8 @@ health:
 # store:
 #   type: directory
 #   name: tiles
+# won't use cache when zoom is larger then this
+#   cache-max-zoom: 16
 
 # additionally, `redis` and `queue` configuration blocks may be
 # optionally specified as well. See the tilequeue sample config for
